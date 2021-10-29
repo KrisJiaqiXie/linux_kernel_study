@@ -18,7 +18,7 @@
 
 _divide_error:
 	pushl $_do_divide_error//把一个c语言函数入栈
-no_error_code:
+no_error_code://无中断码中断
 	xchgl %eax,(%esp)
 	pushl %ebx
 	pushl %ecx
@@ -96,7 +96,7 @@ _irq13:
 
 _double_fault:
 	pushl $_do_double_fault
-error_code:
+error_code://有中断码中断
 	xchgl %eax,4(%esp)		# error code <-> %eax
 	xchgl %ebx,(%esp)		# &function <-> %ebx
 	pushl %ecx
