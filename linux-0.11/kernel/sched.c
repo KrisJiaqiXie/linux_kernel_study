@@ -101,6 +101,7 @@ void math_state_restore()
  * tasks can run. It can not be killed, and it cannot sleep. The 'state'
  * information in task[0] is never used.
  */
+// 时间片分配
 void schedule(void)
 {
 	int i,next,c;
@@ -134,7 +135,7 @@ void schedule(void)
 		}
 		if (c) break;
 		for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
-			if (*p)
+			if (*p)//这里很关键，在低版本内核中，是进行优先级时间片轮转分配，这里搞清楚了优先级和时间片的关系
 				(*p)->counter = ((*p)->counter >> 1) +
 						(*p)->priority;
 	}
@@ -311,12 +312,13 @@ void do_timer(long cpl)
 		if (!--beepcount)
 			sysbeepstop();
 
-	if (cpl)
-		current->utime++;
+	if (cpl)//cpl表示当前被中断的进程是用户态还是内核态
+		current->utime++;//给用户程序运行时间+1
 	else
-		current->stime++;
+		current->stime++;//内核程序运行时间+1
 
-	if (next_timer) {
+	if (next_timer) {// next_timer 是连接jiffies变量的所有定时器的事件链表
+	// 可以这样想象，jiffies是一个时间轴，然后这个时间轴上每个绳结上绑了一个事件，运行到该绳结就触发对应的事件
 		next_timer->jiffies--;
 		while (next_timer && next_timer->jiffies <= 0) {
 			void (*fn)(void);
@@ -327,12 +329,14 @@ void do_timer(long cpl)
 			(fn)();
 		}
 	}
-	if (current_DOR & 0xf0)
+	if (current_DOR & 0xf0)//取高四位
 		do_floppy_timer();
 	if ((--current->counter)>0) return;
-	current->counter=0;
+	current->counter=0;//counter进程的时间片为0，task_struct[]是进程的向量表 
+	//counter在哪里用？ 进程的调度就是task_struct[]中检索，找时间片最大的进程对象来运行 直到时间片为0退出 之后再进行新一轮调用
+	//counter在哪里被设置？ 当task_struct[]所有进程的counter都为0，就进行新一轮的时间片分配
 	if (!cpl) return;
-	schedule();
+	schedule();//这个就是进行时间片分配
 }
 
 int sys_alarm(long seconds)

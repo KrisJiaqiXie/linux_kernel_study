@@ -4,6 +4,7 @@
  *  (C) 1991  Linus Torvalds
  */
 
+// 系统滴答，系统上电之后，会自动算出从1970年1月1日到当前开机点所过的秒数
 #include <time.h>
 
 /*
@@ -37,8 +38,8 @@ static int month[12] = {
 	DAY*(31+29+31+30+31+30+31+31+30+31),
 	DAY*(31+29+31+30+31+30+31+31+30+31+30)
 };
-
-long kernel_mktime(struct tm * tm)
+//这个函数用来算出据1970年所有的秒数
+long kernel_mktime(struct tm * tm)//这个tm是开机的时候从CMOS读出来的
 {
 	long res;
 	int year;

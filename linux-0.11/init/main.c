@@ -73,7 +73,7 @@ inb_p(0x71); \
 
 #define BCD_TO_BIN(val) ((val)=((val)&15) + ((val)>>4)*10)
 
-static void time_init(void)
+static void time_init(void)//这一段代码起到从CMOS中读取时间信息的作用
 {
 	struct tm time;
 
@@ -85,14 +85,15 @@ static void time_init(void)
 		time.tm_mon = CMOS_READ(8);
 		time.tm_year = CMOS_READ(9);
 	} while (time.tm_sec != CMOS_READ(0));
-	BCD_TO_BIN(time.tm_sec);
+	BCD_TO_BIN(time.tm_sec);//把CMOS中读出来的数据进行转换
 	BCD_TO_BIN(time.tm_min);
 	BCD_TO_BIN(time.tm_hour);
 	BCD_TO_BIN(time.tm_mday);
 	BCD_TO_BIN(time.tm_mon);
 	BCD_TO_BIN(time.tm_year);
 	time.tm_mon--;
-	startup_time = kernel_mktime(&time);
+	startup_time = kernel_mktime(&time);//存在startup_time这个全局变量中，并且之后会被JIFFIES使用
+	
 }
 
 static long memory_end = 0;

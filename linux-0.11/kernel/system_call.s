@@ -175,6 +175,8 @@ _device_not_available:
 	ret
 
 .align 2
+//JIFFIES 是一个系统的时钟滴答 一个系统滴答是10ms，每隔10ms会引发一个定时器中断
+//就是这个
 _timer_interrupt:
 	push %ds		# save ds,es and put kernel data space
 	push %es		# into them. %fs is used by _system_call
@@ -188,12 +190,12 @@ _timer_interrupt:
 	mov %ax,%es
 	movl $0x17,%eax
 	mov %ax,%fs
-	incl _jiffies
+	incl _jiffies //自加自身
 	movb $0x20,%al		# EOI to interrupt controller #1
 	outb %al,$0x20
 	movl CS(%esp),%eax
 	andl $3,%eax		# %eax is CPL (0 or 3, 0=supervisor)
-	pushl %eax
+	pushl %eax//以上是在中断时对现场进行保存
 	call _do_timer		# 'do_timer(long CPL)' does everything from
 	addl $4,%esp		# task switching to accounting ...
 	jmp ret_from_sys_call
