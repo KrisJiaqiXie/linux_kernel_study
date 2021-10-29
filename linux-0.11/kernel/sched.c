@@ -389,24 +389,30 @@ void sched_init(void)
 
 	if (sizeof(struct sigaction) != 16)
 		panic("Struct sigaction MUST be 16 bytes");
+	//gdt是全局描述符（系统级别）和前面所说的ldt（局部描述符）对应
+	//内核的代码段
+	//内核的数据段
+	//进程0...n的数据
 	set_tss_desc(gdt+FIRST_TSS_ENTRY,&(init_task.task.tss));
 	set_ldt_desc(gdt+FIRST_LDT_ENTRY,&(init_task.task.ldt));
 	p = gdt+2+FIRST_TSS_ENTRY;
-	for(i=1;i<NR_TASKS;i++) {
+	for(i=1;i<NR_TASKS;i++) {//0-64进程进行遍历
 		task[i] = NULL;
 		p->a=p->b=0;
 		p++;
 		p->a=p->b=0;
 		p++;
-	}
+	}//作用是清空task链表
 /* Clear NT, so that we won't have troubles with that later on */
 	__asm__("pushfl ; andl $0xffffbfff,(%esp) ; popfl");
 	ltr(0);
 	lldt(0);
+	//以下都是设置一些小的寄存器组
 	outb_p(0x36,0x43);		/* binary, mode 3, LSB/MSB, ch 0 */
 	outb_p(LATCH & 0xff , 0x40);	/* LSB */
 	outb(LATCH >> 8 , 0x40);	/* MSB */
 	set_intr_gate(0x20,&timer_interrupt);
 	outb(inb_p(0x21)&~0x01,0x21);
+	//设置系统中断
 	set_system_gate(0x80,&system_call);
 }

@@ -1,7 +1,7 @@
 #ifndef _SCHED_H
 #define _SCHED_H
 
-#define NR_TASKS 64
+#define NR_TASKS 64 //进程数量最大值为64
 #define HZ 100
 
 #define FIRST_TASK task[0]
@@ -48,18 +48,19 @@ struct i387_struct {
 	long	st_space[20];	/* 8*10 bytes for each FP-reg = 80 bytes */
 };
 
+//tss就是这个意思，一个进程运行时肯定要往各种寄存器里填各种数据，这里保存的就是这些数据
 struct tss_struct {
 	long	back_link;	/* 16 high bits zero */
 	long	esp0;
 	long	ss0;		/* 16 high bits zero */
-	long	esp1;
+	long	esp1;//栈指针
 	long	ss1;		/* 16 high bits zero */
 	long	esp2;
-	long	ss2;		/* 16 high bits zero */
+	long	ss2;//寄存器		/* 16 high bits zero */
 	long	cr3;
-	long	eip;
+	long	eip; //程序的运行指针
 	long	eflags;
-	long	eax,ecx,edx,ebx;
+	long	eax,ecx,edx,ebx;//通用寄存器
 	long	esp;
 	long	ebp;
 	long	esi;
@@ -72,38 +73,41 @@ struct tss_struct {
 	long	gs;		/* 16 high bits zero */
 	long	ldt;		/* 16 high bits zero */
 	long	trace_bitmap;	/* bits: trace 0, bitmap 16-31 */
-	struct i387_struct i387;
+	struct i387_struct i387;//协处理器
 };
 
+//task即进程的意思，这个结构体把进程能用到的所有信息进行了封装
 struct task_struct {
 /* these are hardcoded - don't touch */
-	long state;	/* -1 unrunnable, 0 runnable, >0 stopped */
-	long counter;
-	long priority;
-	long signal;
-	struct sigaction sigaction[32];
-	long blocked;	/* bitmap of masked signals */
+	long state;	//程序运行的状态/* -1 unrunnable, 0 runnable, >0 stopped */
+	long counter; //时间片
+	//counter的计算不是单纯的累加，需要下面这个优先级这个参数参与
+	long priority;//优先级
+	long signal;//信号
+	struct sigaction sigaction[32];//信号位图
+	long blocked;//阻塞状态	/* bitmap of masked signals */
 /* various fields */
-	int exit_code;
+	int exit_code;//退出码
 	unsigned long start_code,end_code,end_data,brk,start_stack;
 	long pid,father,pgrp,session,leader;
 	unsigned short uid,euid,suid;
 	unsigned short gid,egid,sgid;
-	long alarm;
-	long utime,stime,cutime,cstime,start_time;
+	long alarm;//警告
+	long utime,stime,cutime,cstime,start_time;//运行时间
+	//utime是用户态运行时间 cutime是内核态运行时间
 	unsigned short used_math;
 /* file system info */
-	int tty;		/* -1 if no tty, so it must be signed */
+	int tty;	//是否打开了控制台	/* -1 if no tty, so it must be signed */
 	unsigned short umask;
 	struct m_inode * pwd;
 	struct m_inode * root;
 	struct m_inode * executable;
 	unsigned long close_on_exec;
-	struct file * filp[NR_OPEN];
+	struct file * filp[NR_OPEN];//打开了多少个文件
 /* ldt for this task 0 - zero 1 - cs 2 - ds&ss */
-	struct desc_struct ldt[3];
+	struct desc_struct ldt[3];//ldt包括两个东西，一个是数据段（全局变量静态变量等），另一个是代码段，不过这里面存的都是指针
 /* tss for this task */
-	struct tss_struct tss;
+	struct tss_struct tss;//进程运行过程中CPU需要知道的进程状态标志（段属性、位属性等）
 };
 
 /*
@@ -133,7 +137,7 @@ struct task_struct {
 	}, \
 }
 
-extern struct task_struct *task[NR_TASKS];
+extern struct task_struct *task[NR_TASKS];//进程的链表
 extern struct task_struct *last_task_used_math;
 extern struct task_struct *current;
 extern long volatile jiffies;

@@ -101,12 +101,14 @@ static long main_memory_start = 0;
 
 struct drive_info { char dummy[32]; } drive_info;
 
+//main函数 linux引导成功后就从这里开始运行
 void main(void)		/* This really IS void, no error here. */
 {			/* The startup routine assumes (well, ...) this */
 /*
  * Interrupts are still disabled. Do necessary setups, then
  * enable them
  */
+//前面这里做的所有事情都是在对内存进行拷贝
  	ROOT_DEV = ORIG_ROOT_DEV;
  	drive_info = DRIVE_INFO;
 	memory_end = (1<<20) + (EXT_MEM_K<<10);
@@ -123,19 +125,32 @@ void main(void)		/* This really IS void, no error here. */
 #ifdef RAMDISK
 	main_memory_start += rd_init(main_memory_start, RAMDISK*1024);
 #endif
+//内存控制器初始化
 	mem_init(main_memory_start,memory_end);
+	//异常函数初始化
 	trap_init();
+	//块设备驱动初始化
 	blk_dev_init();
+	//字符型设备出动初始化
 	chr_dev_init();
+	//控制台设备初始化
 	tty_init();
+	//加载定时器驱动
 	time_init();
+	//进程间调度初始化
 	sched_init();
+	//缓冲区初始化
 	buffer_init(buffer_memory_end);
+	//硬盘初始化
 	hd_init();
+	//软盘初始化
 	floppy_init();
 	sti();
+	//从内核态切换到用户态，上面的初始化都是在内核态运行的
+	//内核态无法被抢占，不能在进程间进行切换，运行不会被干扰
 	move_to_user_mode();
-	if (!fork()) {		/* we count on this going ok */
+	if (!fork()) {	//创建0号进程 fork函数就是用来创建进程的函数	/* we count on this going ok */
+		//0号进程是所有进程的父进程
 		init();
 	}
 /*
@@ -145,6 +160,7 @@ void main(void)		/* This really IS void, no error here. */
  * can run). For task0 'pause()' just means we go check if some other
  * task can run, and if not we return here.
  */
+//0号进程永远不会结束，他会在没有其他进程调用的时候调用，只会执行for(;;) pause();
 	for(;;) pause();
 }
 
@@ -168,36 +184,38 @@ static char * envp[] = { "HOME=/usr/root", NULL };
 void init(void)
 {
 	int pid,i;
-
+	//设置了驱动信息
 	setup((void *) &drive_info);
+	//打开标准输入控制台 句柄为0
 	(void) open("/dev/tty0",O_RDWR,0);
-	(void) dup(0);
-	(void) dup(0);
+	(void) dup(0);//打开标准输入控制台 这里是复制句柄的意思
+	(void) dup(0);//打开标准错误控制台
 	printf("%d buffers = %d bytes buffer space\n\r",NR_BUFFERS,
 		NR_BUFFERS*BLOCK_SIZE);
 	printf("Free mem: %d bytes\n\r",memory_end-main_memory_start);
-	if (!(pid=fork())) {
+	if (!(pid=fork())) {//这里创建1号进程
 		close(0);
-		if (open("/etc/rc",O_RDONLY,0))
+		if (open("/etc/rc",O_RDONLY,0))//如果1号进程创建成功打开/etc/rc这里面保存的大部分是系统配置文件 开机的时候要什么提示信息全部写在这个里面
 			_exit(1);
-		execve("/bin/sh",argv_rc,envp_rc);
+		execve("/bin/sh",argv_rc,envp_rc);//运行shell程序
 		_exit(2);
 	}
-	if (pid>0)
-		while (pid != wait(&i))
+	if (pid>0)//如果这个不是0号进程
+		while (pid != wait(&i))//就等待父进程退出
 			/* nothing */;
 	while (1) {
-		if ((pid=fork())<0) {
+		if ((pid=fork())<0) {//如果创建失败
 			printf("Fork failed in init\r\n");
 			continue;
 		}
-		if (!pid) {
-			close(0);close(1);close(2);
-			setsid();
+		//如果创建成功
+		if (!pid) {//这个分支里面是进行进程的再一次创建
+			close(0);close(1);close(2);//关闭上面那几个输入输出错误的句柄
+			setsid();//重新设置id
 			(void) open("/dev/tty0",O_RDWR,0);
 			(void) dup(0);
-			(void) dup(0);
-			_exit(execve("/bin/sh",argv,envp));
+			(void) dup(0);//重新打开
+			_exit(execve("/bin/sh",argv,envp));//这里不是上面的argv_rc和envp_rc了是因为怕上面那种创建失败，换了一种环境变量来创建，过程和上面是一样的其实
 		}
 		while (1)
 			if (pid == wait(&i))

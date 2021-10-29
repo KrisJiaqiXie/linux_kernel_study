@@ -16,7 +16,10 @@
 #include <linux/kernel.h>
 #include <asm/segment.h>
 #include <asm/system.h>
-
+//进程创建的过程
+//1. 在task链表中找到一个进程空位存放当前进程
+//2. 创建一个task_struct
+//3. 设置task_struct
 extern void write_verify(unsigned long address);
 
 long last_pid=0;
@@ -35,7 +38,8 @@ void verify_area(void * addr,int size)
 		start += 4096;
 	}
 }
-
+// 对内存拷贝
+// 主要作用就是把代码段数据段等栈上的数据拷贝一份
 int copy_mem(int nr,struct task_struct * p)
 {
 	unsigned long old_data_base,new_data_base,data_limit;
@@ -65,6 +69,10 @@ int copy_mem(int nr,struct task_struct * p)
  * information (task[nr]) and sets up the necessary registers. It
  * also copies the data segment in it's entirety.
  */
+// 所谓进程创建就是对0号进程或者当前进程的复制
+// 就是结构体的复制 把task[0]对应的task_struct 复制一份
+//除此之外还要对栈堆拷贝 当进程做创建的时候要复制原有的栈堆
+// nr就是刚刚找到的空槽的pid
 int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 		long ebx,long ecx,long edx,
 		long fs,long es,long ds,
@@ -73,12 +81,13 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 	struct task_struct *p;
 	int i;
 	struct file *f;
-
-	p = (struct task_struct *) get_free_page();
+	//其实就是malloc分配内存
+	p = (struct task_struct *) get_free_page();//在内存分配一个空白页，让指针指向它
 	if (!p)
-		return -EAGAIN;
-	task[nr] = p;
-	*p = *current;	/* NOTE! this doesn't copy the supervisor stack */
+		return -EAGAIN;//如果分配失败就是返回错误
+	task[nr] = p;//把这个指针放入进程的链表当中
+	*p = *current;//把当前进程赋给p，也就是拷贝一份	/* NOTE! this doesn't copy the supervisor stack */
+	//后面全是对这个结构体进行赋值相当于初始化赋值
 	p->state = TASK_UNINTERRUPTIBLE;
 	p->pid = last_pid;
 	p->father = current->pid;
@@ -88,13 +97,13 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 	p->leader = 0;		/* process leadership doesn't inherit */
 	p->utime = p->stime = 0;
 	p->cutime = p->cstime = 0;
-	p->start_time = jiffies;
+	p->start_time = jiffies;//当前的时间
 	p->tss.back_link = 0;
 	p->tss.esp0 = PAGE_SIZE + (long) p;
 	p->tss.ss0 = 0x10;
 	p->tss.eip = eip;
 	p->tss.eflags = eflags;
-	p->tss.eax = 0;
+	p->tss.eax = 0;//把寄存器的参数添加进来
 	p->tss.ecx = ecx;
 	p->tss.edx = edx;
 	p->tss.ebx = ebx;
@@ -110,17 +119,17 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 	p->tss.gs = gs & 0xffff;
 	p->tss.ldt = _LDT(nr);
 	p->tss.trace_bitmap = 0x80000000;
-	if (last_task_used_math == current)
+	if (last_task_used_math == current)//如果使用了就设置协处理器
 		__asm__("clts ; fnsave %0"::"m" (p->tss.i387));
-	if (copy_mem(nr,p)) {
-		task[nr] = NULL;
-		free_page((long) p);
+	if (copy_mem(nr,p)) {//老进程向新进程代码段和数据段进行拷贝
+		task[nr] = NULL;//如果失败了
+		free_page((long) p);//就释放当前页
 		return -EAGAIN;
 	}
-	for (i=0; i<NR_OPEN;i++)
-		if (f=p->filp[i])
-			f->f_count++;
-	if (current->pwd)
+	for (i=0; i<NR_OPEN;i++)//
+		if (f=p->filp[i])//父进程打开过文件
+			f->f_count++;//就会打开文件的计数+1，说明会继承这个属性
+	if (current->pwd)//跟上面一样
 		current->pwd->i_count++;
 	if (current->root)
 		current->root->i_count++;
@@ -128,10 +137,11 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 		current->executable->i_count++;
 	set_tss_desc(gdt+(nr<<1)+FIRST_TSS_ENTRY,&(p->tss));
 	set_ldt_desc(gdt+(nr<<1)+FIRST_LDT_ENTRY,&(p->ldt));
-	p->state = TASK_RUNNING;	/* do this last, just in case */
-	return last_pid;
+	p->state = TASK_RUNNING;//把状态设定为运行状态	/* do this last, just in case */
+	return last_pid;//返回新创建进程的id号
 }
 
+//大概意思就是一直循环重复找，直到找到一个空的位置
 int find_empty_process(void)
 {
 	int i;
@@ -143,5 +153,5 @@ int find_empty_process(void)
 	for(i=1 ; i<NR_TASKS ; i++)
 		if (!task[i])
 			return i;
-	return -EAGAIN;
+	return -EAGAIN;//达到64的最大值后，返回错误码
 }

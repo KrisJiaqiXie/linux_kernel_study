@@ -205,8 +205,8 @@ _sys_execve:
 	ret
 
 .align 2
-_sys_fork:
-	call _find_empty_process
+_sys_fork://fork的系统调用
+	call _find_empty_process//调用这个函数
 	testl %eax,%eax
 	js 1f
 	push %gs
@@ -214,7 +214,7 @@ _sys_fork:
 	pushl %edi
 	pushl %ebp
 	pushl %eax
-	call _copy_process
+	call _copy_process//
 	addl $20,%esp
 1:	ret
 
