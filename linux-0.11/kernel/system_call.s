@@ -30,6 +30,8 @@
  *	2C(%esp) - %oldss
  */
 
+//sys_call 是一个类似于中断的东西，和中断一样，有一个sys_call 的table保存sys_call的号和代码地址
+//可以在汇编代码中通过CALL调用c语言写的函数
 SIG_CHLD	= 17
 
 EAX		= 0x00

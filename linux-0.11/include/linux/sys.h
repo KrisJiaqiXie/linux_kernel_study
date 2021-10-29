@@ -71,6 +71,7 @@ extern int sys_ssetmask();
 extern int sys_setreuid();
 extern int sys_setregid();
 
+//定义系统调用的sys_call_table
 fn_ptr sys_call_table[] = { sys_setup, sys_exit, sys_fork, sys_read,
 sys_write, sys_open, sys_close, sys_waitpid, sys_creat, sys_link,
 sys_unlink, sys_execve, sys_chdir, sys_time, sys_mknod, sys_chmod,

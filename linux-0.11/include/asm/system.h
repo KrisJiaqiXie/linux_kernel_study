@@ -32,7 +32,7 @@ __asm__ ("movw %%dx,%%ax\n\t" \
 
 #define set_intr_gate(n,addr) \
 	_set_gate(&idt[n],14,0,addr)
-
+//idt就是中断描述表，这里就是往表里填中断号和中断程序的地址
 #define set_trap_gate(n,addr) \
 	_set_gate(&idt[n],15,0,addr)
 

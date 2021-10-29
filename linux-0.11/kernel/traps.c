@@ -60,11 +60,14 @@ void reserved(void);
 void parallel_interrupt(void);
 void irq13(void);
 
+//esp_ptr 段指针
+//nr 出错的段号
+//总的来说die函数就是用来打印错误信息
 static void die(char * str,long esp_ptr,long nr)
 {
 	long * esp = (long *) esp_ptr;
 	int i;
-
+	//以下基本在打印栈信息
 	printk("%s: %04x\n\r",str,nr&0xffff);
 	printk("EIP:\t%04x:%p\nEFLAGS:\t%p\nESP:\t%04x:%p\n",
 		esp[1],esp[0],esp[2],esp[4],esp[3]);
@@ -81,7 +84,7 @@ static void die(char * str,long esp_ptr,long nr)
 	for(i=0;i<10;i++)
 		printk("%02x ",0xff & get_seg_byte(esp[1],(i+(char *)esp[0])));
 	printk("\n\r");
-	do_exit(11);		/* play segment exception */
+	do_exit(11);//退出中断		/* play segment exception */
 }
 
 void do_double_fault(long esp, long error_code)
@@ -93,7 +96,7 @@ void do_general_protection(long esp, long error_code)
 {
 	die("general protection",esp,error_code);
 }
-
+//asm.s调用的第一个函数在这里
 void do_divide_error(long esp, long error_code)
 {
 	die("divide error",esp,error_code);
@@ -178,12 +181,15 @@ void do_reserved(long esp, long error_code)
 	die("reserved (15,17-47) error",esp,error_code);
 }
 
+//中断的初始化函数
+//set_trap_gate 优先级较低 只能由用户程序来调用
+//set_system_gate 优先级很高 能由系统和用户所有的程序调用
 void trap_init(void)
 {
 	int i;
 
-	set_trap_gate(0,&divide_error);
-	set_trap_gate(1,&debug);
+	set_trap_gate(0,&divide_error);//如果被除数是0就会产生这个中断
+	set_trap_gate(1,&debug);//单步调试的时候调用这个中断
 	set_trap_gate(2,&nmi);
 	set_system_gate(3,&int3);	/* int3-5 can be called from all */
 	set_system_gate(4,&overflow);

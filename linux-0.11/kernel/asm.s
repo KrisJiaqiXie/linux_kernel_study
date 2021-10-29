@@ -17,7 +17,7 @@
 .globl _general_protection,_coprocessor_error,_irq13,_reserved
 
 _divide_error:
-	pushl $_do_divide_error
+	pushl $_do_divide_error//把一个c语言函数入栈
 no_error_code:
 	xchgl %eax,(%esp)
 	pushl %ebx
@@ -50,9 +50,9 @@ no_error_code:
 	popl %eax
 	iret
 
-_debug:
+_debug://这是一个中断
 	pushl $_do_int3		# _do_debug
-	jmp no_error_code
+	jmp no_error_code//跳转
 
 _nmi:
 	pushl $_do_nmi
