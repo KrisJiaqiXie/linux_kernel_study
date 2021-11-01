@@ -8,7 +8,7 @@ typedef unsigned int sigset_t;		/* 32 bits */
 
 #define _NSIG             32
 #define NSIG		_NSIG
-
+//定义信号量总共22个
 #define SIGHUP		 1
 #define SIGINT		 2
 #define SIGQUIT		 3
@@ -46,8 +46,8 @@ typedef unsigned int sigset_t;		/* 32 bits */
 #define SIG_IGN		((void (*)(int))1)	/* ignore signal */
 
 struct sigaction {
-	void (*sa_handler)(int);
-	sigset_t sa_mask;
+	void (*sa_handler)(int);//信号处理函数
+	sigset_t sa_mask;//是否屏蔽
 	int sa_flags;
 	void (*sa_restorer)(void);
 };
