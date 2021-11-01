@@ -15,12 +15,12 @@
 #if (NR_OPEN > 32)
 #error "Currently the close-on-exec-flags are in one word, max 32 files/proc"
 #endif
-
-#define TASK_RUNNING		0
-#define TASK_INTERRUPTIBLE	1
-#define TASK_UNINTERRUPTIBLE	2
-#define TASK_ZOMBIE		3
-#define TASK_STOPPED		4
+// 宏定义运行状态
+#define TASK_RUNNING		0   //可以被运行 只有在这个状态才能进行进程切换
+#define TASK_INTERRUPTIBLE	1	//可以被信号中断 变成running
+#define TASK_UNINTERRUPTIBLE	2 //只能被wakeup唤醒 变成running
+#define TASK_ZOMBIE		3	//收到SIGSTOP SIGTSTP SIGTTIN这几个信号就会暂停
+#define TASK_STOPPED		4 //进程停止运行 但是父进程还未将其清空
 
 #ifndef NULL
 #define NULL ((void *) 0)
@@ -172,6 +172,9 @@ __asm__("str %%ax\n\t" \
  * This also clears the TS-flag if the task we switched to has used
  * tha math co-processor latest.
  */
+// 进程切换是用汇编宏定义实现的
+//1. 将需要切换的进程赋值给当前进程的指针
+//2. 将进程的上下文（TSS和当前堆栈中的信息）切换
 #define switch_to(n) {\
 struct {long a,b;} __tmp; \
 __asm__("cmpl %%ecx,_current\n\t" \

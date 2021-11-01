@@ -22,7 +22,8 @@
 
 #define _S(nr) (1<<((nr)-1))
 #define _BLOCKABLE (~(_S(SIGKILL) | _S(SIGSTOP)))
-
+//nr就是pid
+//这个函数就是用来打印pid号和state
 void show_task(int nr,struct task_struct * p)
 {
 	int i,j = 4096-sizeof(struct task_struct);
@@ -34,6 +35,7 @@ void show_task(int nr,struct task_struct * p)
 	printk("%d (of %d) chars free in kernel stack\n\r",i,j);
 }
 
+//辅助函数 打印当前所有的进程信息
 void show_stat(void)
 {
 	int i;
@@ -59,7 +61,7 @@ static union task_union init_task = {INIT_TASK,};
 
 long volatile jiffies=0;
 long startup_time=0;
-struct task_struct *current = &(init_task.task);
+struct task_struct *current = &(init_task.task);//全局变量 指向当前运行的进程
 struct task_struct *last_task_used_math = NULL;
 
 struct task_struct * task[NR_TASKS] = {&(init_task.task), };
@@ -74,6 +76,9 @@ struct {
  *  'math_state_restore()' saves the current math information in the
  * old math state array, and gets the new ones from the current task
  */
+
+//协处理器的恢复函数
+//协处理器其实就想象成是CPU，切换进程时，协处理器的一些寄存器栈堆等数据也要进行切换
 void math_state_restore()
 {
 	if (last_task_used_math == current)
@@ -110,18 +115,22 @@ void schedule(void)
 /* check alarm, wake up any interruptible tasks that have got a signal */
 
 	for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
-		if (*p) {
+		if (*p) {//alarm是用来设置警告，比如jiffies有1000个可能其中一些需要警告那么就用alarm来实现
 			if ((*p)->alarm && (*p)->alarm < jiffies) {
 					(*p)->signal |= (1<<(SIGALRM-1));
 					(*p)->alarm = 0;
 				}
+				//~(_BLOCKABLE & (*p)->blocked  
+				//&&(*p)->state==TASK_INTERRUPTIBLE
+				//用来排除非阻塞信号
+				//如果该进程为可中断睡眠状态 则如果该进程有非屏蔽信号出现就将该进程的状态设置为running
 			if (((*p)->signal & ~(_BLOCKABLE & (*p)->blocked)) &&
 			(*p)->state==TASK_INTERRUPTIBLE)
 				(*p)->state=TASK_RUNNING;
 		}
 
 /* this is the scheduler proper: */
-
+	// 以下思路，循环task列表 根据counter大小决定进程切换
 	while (1) {
 		c = -1;
 		next = 0;
@@ -129,16 +138,19 @@ void schedule(void)
 		p = &task[NR_TASKS];
 		while (--i) {
 			if (!*--p)
-				continue;
-			if ((*p)->state == TASK_RUNNING && (*p)->counter > c)
+				continue;//进程为空就继续循环
+			if ((*p)->state == TASK_RUNNING && (*p)->counter > c)//找出c最大的task
 				c = (*p)->counter, next = i;
 		}
-		if (c) break;
+		if (c) break;//如果c找到了，就终结循环，说明找到了
+		//进行时间片的重新分配
 		for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
 			if (*p)//这里很关键，在低版本内核中，是进行优先级时间片轮转分配，这里搞清楚了优先级和时间片的关系
+			//counter = counter/2 + priority
 				(*p)->counter = ((*p)->counter >> 1) +
 						(*p)->priority;
 	}
+	//切换到下一个进程 这个功能使用宏定义完成的
 	switch_to(next);
 }
 
@@ -148,17 +160,18 @@ int sys_pause(void)
 	schedule();
 	return 0;
 }
-
+// 当某个进程想访问CPU资源，但是CPU资源被占用访问不到，就会休眠
 void sleep_on(struct task_struct **p)
 {
 	struct task_struct *tmp;
 
-	if (!p)
+	if (!p)//如果传进来的是空的 就返回
 		return;
-	if (current == &(init_task.task))
-		panic("task[0] trying to sleep");
+	if (current == &(init_task.task))//当前进程是0号 
+		panic("task[0] trying to sleep");//就打印并且返回
 	tmp = *p;
-	*p = current;
+	*p = current;//这两步相当于 给休眠链表添加了一个新node
+	// 其实核心就是把state置为TASK_UNINTERRUPTIBLE
 	current->state = TASK_UNINTERRUPTIBLE;
 	schedule();
 	if (tmp)
