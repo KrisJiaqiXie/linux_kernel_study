@@ -54,6 +54,7 @@ extern long startup_time;
 
 /*
  * This is set up by the setup-routine at boot-time
+ 全局变量 都是在boot阶段读入的，然后放到宏定义中
  */
 #define EXT_MEM_K (*(unsigned short *)0x90002)
 #define DRIVE_INFO (*(struct drive_info *)0x90080)
@@ -110,14 +111,16 @@ void main(void)		/* This really IS void, no error here. */
  * enable them
  */
 //前面这里做的所有事情都是在对内存进行拷贝
- 	ROOT_DEV = ORIG_ROOT_DEV;
- 	drive_info = DRIVE_INFO;
+ 	ROOT_DEV = ORIG_ROOT_DEV;//设置操作系统的根文件
+ 	drive_info = DRIVE_INFO;//设置操作系统驱动参数
+	 //解析setup.s代码后获取系统内存参数
 	memory_end = (1<<20) + (EXT_MEM_K<<10);
+	//取整4k的内存大小
 	memory_end &= 0xfffff000;
-	if (memory_end > 16*1024*1024)
+	if (memory_end > 16*1024*1024)//控制操作系统的最大内存为16M
 		memory_end = 16*1024*1024;
 	if (memory_end > 12*1024*1024) 
-		buffer_memory_end = 4*1024*1024;
+		buffer_memory_end = 4*1024*1024;//设置高速缓冲区的大小，跟块设备有关，跟设备交互的时候，充当缓冲区，写入到块设备中的数据先放在缓冲区里，只有执行sync时才真正写入；这也是为什么要区分块设备驱动和字符设备驱动；块设备写入需要缓冲区，字符设备不需要是直接写入的
 	else if (memory_end > 6*1024*1024)
 		buffer_memory_end = 2*1024*1024;
 	else

@@ -1,4 +1,7 @@
-!
+！ 1. 解析BIOS/BOOTLOADER中传递来的参数
+！ 2. 设置系统内核运行的LDT 和IDT 全局描述符 各寄存器
+！ 3. 设置中断控制芯片 进入保护模式运行
+！ 4. 跳转到system模块的最前面的代码运行（head.s）
 !	setup.s		(C) 1991 Linus Torvalds
 !
 ! setup.s is responsible for getting the system data from the BIOS,

@@ -1,3 +1,7 @@
+！ 由BIOS把bootsect从某个固定的地址（0xFFFF0）拿到了内存中的某个固定地址（0x90000）
+!  并且进行了一系列初始化操作
+！ 这个文件的作用：将后续的setup.s从磁盘中加载到紧接着执行的内存位置
+！ 在显示屏上显示loading，再将system加载到0x10000，最后跳转到setup中去操作
 !
 ! SYS_SIZE is the number of clicks (16 bytes) to be loaded.
 ! 0x3000 is 0x30000 bytes = 196kB, more than enough for current
