@@ -198,7 +198,7 @@ void init(void)
 		NR_BUFFERS*BLOCK_SIZE);
 	printf("Free mem: %d bytes\n\r",memory_end-main_memory_start);
 	if (!(pid=fork())) {//这里创建1号进程
-		close(0);
+		close(0);//关闭了0号进程的标准输入输出
 		if (open("/etc/rc",O_RDONLY,0))//如果1号进程创建成功打开/etc/rc这里面保存的大部分是系统配置文件 开机的时候要什么提示信息全部写在这个里面
 			_exit(1);
 		execve("/bin/sh",argv_rc,envp_rc);//运行shell程序
