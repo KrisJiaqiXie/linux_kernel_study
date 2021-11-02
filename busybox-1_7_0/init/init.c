@@ -761,7 +761,7 @@ static void parse_inittab(void)
 	char *id, *runlev, *action, *command, *eol;
 	const struct init_action_type *a = actions;
 
-	file = fopen(INITTAB, "r");
+	file = fopen(INITTAB, "r");//打开了一个INITTAB文件
 	if (file == NULL) {
 		/* No inittab file -- set up some default behavior */
 #endif
@@ -999,7 +999,7 @@ int init_main(int argc, char **argv)
 	/* Next run anything to be run only once */
 	run_actions(ONCE);
 
-#if ENABLE_FEATURE_USE_INITTAB
+#if ENABLE_FEATURE_USE_INITTAB//INITTAB这个文件在/etc/inittab下
 	/* Redefine SIGHUP to reread /etc/inittab */
 	signal(SIGHUP, reload_signal);
 #else
