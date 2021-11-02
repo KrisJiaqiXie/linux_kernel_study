@@ -222,11 +222,12 @@ extern bool initcall_debug;
 #define security_initcall(fn) \
 	static initcall_t __initcall_##fn \
 	__used __section(.security_initcall.init) = fn
-
+// 这个结构体和文件系统有关
+//这个结构体很有用 uboot启动引导之后，有些命令行参数被保存在这个结构体中
 struct obs_kernel_param {
-	const char *str;
-	int (*setup_func)(char *);
-	int early;
+	const char *str;//setup字符串
+	int (*setup_func)(char *);//字符串对应的执行函数
+	int early;//一个flag
 };
 
 /*
@@ -235,6 +236,7 @@ struct obs_kernel_param {
  * Force the alignment so the compiler doesn't space elements of the
  * obs_kernel_param "array" too far apart in .init.setup.
  */
+// __setup_param定义处
 #define __setup_param(str, unique_id, fn, early)			\
 	static const char __setup_str_##unique_id[] __initconst	\
 		__aligned(1) = str; \
@@ -242,7 +244,7 @@ struct obs_kernel_param {
 		__used __section(.init.setup)			\
 		__attribute__((aligned((sizeof(long)))))	\
 		= { __setup_str_##unique_id, fn, early }
-
+//__setup定义处 宏定义
 #define __setup(str, fn)					\
 	__setup_param(str, fn, fn, 0)
 

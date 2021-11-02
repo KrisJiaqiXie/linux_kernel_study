@@ -153,6 +153,11 @@ const char * envp_init[MAX_INIT_ENVS+2] = { "HOME=/", "TERM=linux", NULL, };
 static const char *panic_later, *panic_param;
 
 extern const struct obs_kernel_param __setup_start[], __setup_end[];
+//解析
+//UBOOST传入了很多参数，被解析为多个setup的段 存放在.init.setup的代码段中
+//形式为CMD字符串，这些命令也对应了一些函数
+//在这个两个函数obsolete_checksetup（early为0） do_early_param（early不为0）中进行了所有存放在.init.setup代码段的命令执行
+//针对各种setup段的CMD进行全局变量赋值
 
 static int __init obsolete_checksetup(char *line)
 {
@@ -163,6 +168,8 @@ static int __init obsolete_checksetup(char *line)
 	do {
 		int n = strlen(p->str);
 		if (parameqn(line, p->str, n)) {
+			//early为0的情况时的参数处理
+			//
 			if (p->early) {
 				/* Already done in parse_early_param?
 				 * (Needs exact match on param part).
@@ -286,12 +293,16 @@ static int __init unknown_bootoption(char *param, char *val)
 	}
 	return 0;
 }
-
+//调用init_setup这个函数的时候execute_command被赋值
 static int __init init_setup(char *str)
 {
 	unsigned int i;
-
-	execute_command = str;
+	//execute_command 是UBOOT传入的参数
+	//例如
+	//init=linuxrc
+	//execute_command=linuxrc
+	//之后会执行这个命令linuxrc如果是自制的系统，这个命令一般就被指向了busybox
+	execute_command = str;//execute_command被替换为传入的字符串
 	/*
 	 * In case LILO is going to boot us with default command line,
 	 * it prepends "auto" before the whole cmdline which makes
@@ -795,6 +806,7 @@ static void run_init_process(const char *init_filename)
 /* This is a non __init function. Force it to be noinline otherwise gcc
  * makes it inline to init() and it becomes part of init.text section
  */
+
 static noinline int init_post(void)
 {
 	/* need to finish all async __init code before freeing the memory */
@@ -819,16 +831,16 @@ static noinline int init_post(void)
 	 * The Bourne shell can be used instead of init if we are
 	 * trying to recover a really broken machine.
 	 */
-	if (execute_command) {
+	if (execute_command) {//如果execute_command不为空 就运行这个命令
 		run_init_process(execute_command);
 		printk(KERN_WARNING "Failed to execute %s.  Attempting "
 					"defaults...\n", execute_command);
-	}
+	}//如果execute_command为空则执行下面四个
 	run_init_process("/sbin/init");
 	run_init_process("/etc/init");
 	run_init_process("/bin/init");
-	run_init_process("/bin/sh");
-
+	run_init_process("/bin/sh");//这几个必须由文件系统提供
+	//这个panic表达的就是如果文件系统没找到则linux启动失败
 	panic("No init found.  Try passing init= option to kernel. "
 	      "See Linux Documentation/init.txt for guidance.");
 }
@@ -865,6 +877,7 @@ static int __init kernel_init(void * unused)
 	do_basic_setup();
 
 	/* Open the /dev/console on the rootfs, this should never fail */
+	////挂载文件系统的起点 打开/dev/console
 	if (sys_open((const char __user *) "/dev/console", O_RDWR, 0) < 0)
 		printk(KERN_WARNING "Warning: unable to open an initial console.\n");
 

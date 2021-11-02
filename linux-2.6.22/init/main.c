@@ -311,7 +311,7 @@ static int __init unknown_bootoption(char *param, char *val)
 	}
 	return 0;
 }
-
+// 这里对execute_command进行赋值
 static int __init init_setup(char *str)
 {
 	unsigned int i;
@@ -327,7 +327,7 @@ static int __init init_setup(char *str)
 		argv_init[i] = NULL;
 	return 1;
 }
-__setup("init=", init_setup);
+__setup("init=", init_setup);//
 
 static int __init rdinit_setup(char *str)
 {
@@ -752,15 +752,15 @@ static int noinline init_post(void)
 	mark_rodata_ro();
 	system_state = SYSTEM_RUNNING;
 	numa_default_policy();
-
-	if (sys_open((const char __user *) "/dev/console", O_RDWR, 0) < 0)
+	///dev/console文件系统提供的
+	if (sys_open((const char __user *) "/dev/console", O_RDWR, 0) < 0)//打开控制台这个句柄
 		printk(KERN_WARNING "Warning: unable to open an initial console.\n");
 
 	(void) sys_dup(0);
 	(void) sys_dup(0);
 
 	if (ramdisk_execute_command) {
-		run_init_process(ramdisk_execute_command);
+		run_init_process(ramdisk_execute_command);//只要执行成功了，这个函数就再也不会返回了
 		printk(KERN_WARNING "Failed to execute %s\n",
 				ramdisk_execute_command);
 	}
@@ -771,16 +771,16 @@ static int noinline init_post(void)
 	 * The Bourne shell can be used instead of init if we are
 	 * trying to recover a really broken machine.
 	 */
-	if (execute_command) {
+	if (execute_command) {//如果命令串被定义则执行自定义的命令
 		run_init_process(execute_command);
 		printk(KERN_WARNING "Failed to execute %s.  Attempting "
 					"defaults...\n", execute_command);
 	}
-	run_init_process("/sbin/init");
+	run_init_process("/sbin/init");//这四个都应该由文件系统提供
 	run_init_process("/etc/init");
 	run_init_process("/bin/init");
 	run_init_process("/bin/sh");
-
+	//如果当前的文件系统中没有可执行的初始化程序 则内核启动文件失败
 	panic("No init found.  Try passing init= option to kernel.");
 }
 
